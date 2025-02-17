@@ -1,0 +1,47 @@
+
+
+# ==========================
+# Stage 1: Build Environment
+# ==========================
+
+# Use a lightweight Python 3.9 image for building dependencies
+FROM python:3.9-slim AS builder  
+
+# Set the working directory inside the container to /app
+WORKDIR /app  
+
+# Copy all project files from the host to the /app directory in the container
+COPY . .  
+
+# Install all required Python dependencies in /app/deps
+RUN pip install -r requirements.txt --target=/app/deps  
+
+# ==========================
+# Stage 2: where we will have just the code and the code dependencies   without Linux distribution
+# ==========================
+
+
+# Use a minimal Python 3 runtime image for better security and performance
+FROM gcr.io/distroless/python3-debian12 
+
+# Set the working directory inside the container to /app
+WORKDIR /app  
+
+# Copy installed dependencies from the builder stage to the final image
+COPY --from=builder /app/deps /app/deps  
+
+# Copy the entire application code from the builder stage to the final image
+COPY --from=builder /app .
+  
+
+# Set the environment variable to tell Python where to look for installed dependencies
+ENV PYTHONPATH="/app/deps" 
+
+# Inform Docker that the container will listen on port 80 (useful for web applications)
+EXPOSE 80 
+
+# Define the default command to run the application using Python
+CMD ["run.py"] 
+
+
+
